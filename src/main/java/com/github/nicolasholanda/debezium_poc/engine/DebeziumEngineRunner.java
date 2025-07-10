@@ -1,5 +1,8 @@
 package com.github.nicolasholanda.debezium_poc.engine;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.nicolasholanda.debezium_poc.model.UserChangeEventDTO;
+import com.github.nicolasholanda.debezium_poc.service.UserCacheService;
 import io.debezium.config.Configuration;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
@@ -24,6 +27,9 @@ public class DebeziumEngineRunner implements CommandLineRunner {
     @Autowired
     private Configuration userConnector;
 
+    @Autowired
+    private UserCacheService userCacheService;
+
     @Override
     public void run(String... args) {
         executor = Executors.newSingleThreadExecutor();
@@ -37,7 +43,23 @@ public class DebeziumEngineRunner implements CommandLineRunner {
     }
 
     private void handleEvent(ChangeEvent<String, String> event) {
-        logger.info("Received Debezium event: {}", event.value());
+        try {
+            String json = event.value();
+            ObjectMapper mapper = new ObjectMapper();
+            UserChangeEventDTO dto = mapper.readValue(json, UserChangeEventDTO.class);
+
+            switch (dto.op) {
+                case "c": // create
+                case "u": // update
+                    userCacheService.updateCache(dto.after);
+                    break;
+                case "d": // delete
+                    userCacheService.deleteFromCache(dto.before.id);
+                    break;
+            }
+        } catch (Exception e) {
+            logger.error("Error processing Debezium event", e);
+        }
     }
 
     @PreDestroy
