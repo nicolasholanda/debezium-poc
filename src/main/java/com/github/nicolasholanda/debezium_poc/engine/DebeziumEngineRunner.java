@@ -1,6 +1,7 @@
 package com.github.nicolasholanda.debezium_poc.engine;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nicolasholanda.debezium_poc.model.UserChangeEventDTO;
 import com.github.nicolasholanda.debezium_poc.service.UserCacheService;
@@ -44,16 +45,20 @@ public class DebeziumEngineRunner implements CommandLineRunner {
     }
 
     private void handleEvent(ChangeEvent<String, String> event) {
+        logger.info("Received Debezium event: {}", event.value());
         try {
             String json = event.value();
+
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            UserChangeEventDTO dto = mapper.readValue(json, UserChangeEventDTO.class);
 
-            logger.info("Received Debezium event: {}", dto);
+            JsonNode root = mapper.readTree(json);
+            JsonNode payloadNode = root.get("payload");
+            UserChangeEventDTO dto = mapper.treeToValue(payloadNode, UserChangeEventDTO.class);
 
             switch (dto.op) {
                 case "c": // create
+                case "r": // read
                 case "u": // update
                     userCacheService.updateCache(dto.after);
                     break;

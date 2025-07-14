@@ -35,11 +35,12 @@ public class DebeziumConfig {
                 .with("database.password", userDbPassword)
                 .with("database.dbname", userDbName)
                 .with("database.include.list", userDbName)
-                .with("include.schema.changes", "false")
+                .with("include.schema.changes", "true")
                 .with("database.server.id", "10181")
                 .with("database.server.name", "user-postgres-db-server")
                 .with("database.history", "io.debezium.relational.history.FileDatabaseHistory")
                 .with("database.history.file.filename", "/tmp/dbhistory.dat")
+                .with("poll.interval.ms", "5000")
                 .build();
     }
 }
